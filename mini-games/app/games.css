@@ -81,12 +81,15 @@
 .game-card-footer .game-card-play { margin-left: auto; color: var(--primary); font-size: 13px; font-weight: 600; }
 .games-footer { border-top: 1px solid var(--border); padding-block: 24px; display: flex; justify-content: space-between; gap: 24px; color: var(--muted-foreground); font-size: 10px; line-height: 1.8; }
 .games-footer a { text-decoration: underline; text-underline-offset: 3px; }
-.zepimon-page { min-height: 100vh; display: flex; flex-direction: column; padding: 18px max(16px, calc((100% - 1160px) / 2)) 24px; background: var(--background); color: var(--foreground); }
-.zepimon-page-header { display: flex; align-items: center; justify-content: space-between; min-height: 52px; gap: 16px; }
-.zepimon-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 13px; font-weight: 600; }
-.zepimon-back:hover { color: var(--foreground); }
-.zepimon-page-label { margin: 0; color: var(--muted-foreground); font: 10px var(--font-mono); letter-spacing: .12em; }
-.zepimon-frame { display: block; width: 100%; height: calc(100vh - 94px); min-height: 620px; border: 1px solid var(--border); border-radius: 14px; background: var(--background); }
+.zepimon-page { --zepimon-line: #c5b7ec24; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--background); color: var(--foreground); }
+.zepimon-topbar { flex: none; width: min(1320px, calc(100% - 80px)); min-height: 72px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.zepimon-topbar .wordmark { min-width: 0; }
+.zepimon-wordmark-label { overflow: hidden; color: var(--muted-foreground); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; padding-left: 20px; border-left: 1px solid var(--zepimon-line); }
+.zepimon-topbar nav { display: flex; flex-shrink: 0; gap: 28px; }
+.zepimon-topbar nav a { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--muted-foreground); font-size: 13px; transition: color .15s; }
+.zepimon-topbar nav a:hover { color: var(--primary); }
+.zepimon-main { flex: 1; min-height: 0; display: flex; border-top: 1px solid var(--zepimon-line); }
+.zepimon-frame { display: block; flex: 1; width: 100%; height: 100%; border: 0; background: var(--background); }
 .games-teaser { margin-top: 42px; pointer-events: auto; }
 .games-section-heading { align-items: center; }
 .games-section-heading h2 { font-size: 30px; line-height: 1.2; font-weight: 600; letter-spacing: -.03em; margin: 0 0 8px; }
@@ -115,9 +118,12 @@
   .dex-wild-sprite { width: 108px; }
   .dex-grid { grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 9px; }
   .dex-card { min-height: 155px; padding-inline: 7px; }
-  .zepimon-page { padding: 8px 0 0; }
-  .zepimon-page-header { padding-inline: 16px; }
-  .zepimon-page-label { font-size: 9px; }
-  .zepimon-frame { height: calc(100dvh - 68px); min-height: 560px; border-inline: 0; border-radius: 0; }
+  .zepimon-topbar { width: calc(100% - 32px); min-height: 56px; gap: 12px; }
+  .zepimon-topbar .wordmark { gap: 12px; }
+  .zepimon-topbar .wordmark strong { font-size: 24px; }
+  .zepimon-wordmark-label { padding-left: 12px; font-size: 11px; }
+  .zepimon-topbar nav { gap: 16px; }
+  .zepimon-topbar nav a { font-size: 12px; gap: 6px; }
+  .zepimon-topbar nav a:last-child span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .game-card, .game-card-art .pokemon-sprite { transition: none; } .game-card-art .pokemon-sprite-sheet { animation: none; } .game-card:hover .game-art-first { transform: none; } .game-card:hover .game-art-second { transform: scaleX(-1); } }

@@ -108,17 +108,22 @@ export default function PlayScreen({ standalone = false, initialGame }: { standa
 
   const stageOpen = selected === 'levels' && trailStage !== null
   function playLevel(level: Level) { setTrailStage(level.stage); select({ game: 'trail', level }) }
+  // Where the back button leads. A standalone page (the web playground) opens one game straight away, so it has no
+  // games menu to go back to: the site's own header leads back to every game instead.
+  const backTitle = launch?.stop ? 'Back to the map' : stageOpen ? 'Back to stages' : launch?.game === 'trail' ? 'Back to levels' : 'Back to games'
+  const showBack = !(standalone && backTitle === 'Back to games')
+  const showFullToggle = inGame && !fill
 
   return <Screen fill={fill && inGame} full={immersive} edge={overlay} page={selected === 'levels' ? `levels-${trailStage}` : undefined}><GameScreenContext.Provider value={screen}>
     {/* A running battle and the Safari Zone's hunt have the full-screen toggle in their own top bar. */}
     {selected ? immersive ? !fill && <View style={{ alignItems: 'flex-end' }}>
       <IconButton name="fullscreenExit" label="Exit full screen" onPress={() => setFull(false)} />
-    </View> : <View style={[styles.row, { flexWrap: 'nowrap' }]}>
-      <View style={{ flex: 1 }}>
-        <Button title={launch?.stop ? 'Back to the map' : stageOpen ? 'Back to stages' : launch?.game === 'trail' ? 'Back to levels' : 'Back to games'} secondary
+    </View> : (showBack || showFullToggle) && <View style={[styles.row, { flexWrap: 'nowrap', justifyContent: 'flex-end' }]}>
+      {showBack && <View style={{ flex: 1 }}>
+        <Button title={backTitle} secondary
           onPress={() => stageOpen ? setTrailStage(null) : select(launch?.stop ? 'map' : launch?.game === 'trail' ? 'levels' : null)} />
-      </View>
-      {inGame && !fill && <IconButton name="fullscreen" label="Full screen" size={50} onPress={() => setFull(true)} />}
+      </View>}
+      {showFullToggle && <IconButton name="fullscreen" label="Full screen" size={showBack ? 50 : 44} onPress={() => setFull(true)} />}
     </View> : <>
       <View style={look.header}>
         <PokeballIcon size={30} color={colors.ink} />
@@ -203,7 +208,7 @@ export default function PlayScreen({ standalone = false, initialGame }: { standa
       bonusKm={bonus.km} bonusNote={ballsNote} dex={dex} goal={launch.stop ? STAR_GOALS.safari : undefined}
       buddy={buddy ? { name: buddy.replace(/^Shiny /, ''), shiny: buddy.startsWith('Shiny ') } : null}
       record={launch.stop ? stopRecord(launch.stop) : safariBest}
-      onCatch={recordSafariCatch} onLeave={() => select(launch.stop ? 'map' : null)}
+      onCatch={recordSafariCatch} onLeave={launch.stop ? () => select('map') : standalone ? undefined : () => select(null)}
       onComplete={catches => launch.stop ? saveStars(launch.stop, safariStars(catches)) : saveScore('safari', catches)} />}
     {selected === 'memory' && <MemoryMatch entries={entries} bestMoves={bestMoves} onComplete={(pairs, moves) => {
       recordWin(pairs, moves).then(() => setMessage('Your score is saved.')).catch(() => setMessage('Could not save this score. Please try again.'))
