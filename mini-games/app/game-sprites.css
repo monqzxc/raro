@@ -1,0 +1,5 @@
+.pokemon-sprite { position: relative; display: block; overflow: hidden; aspect-ratio: 1; contain: paint; }
+.pokemon-sprite-sheet { position: absolute; inset: 0 auto auto 0; width: 200%; height: 200%; background-size: 100% 100%; background-repeat: no-repeat; image-rendering: pixelated; animation: sprite-frames var(--frame-ms, 900ms) steps(2) infinite; }
+.pokemon-sprite.is-shiny .pokemon-sprite-sheet { transform: translateY(-50%); animation-name: shiny-sprite-frames; }
+@keyframes sprite-frames { to { transform: translateX(-100%); } }
+@keyframes shiny-sprite-frames { to { transform: translate(-100%, -50%); } }

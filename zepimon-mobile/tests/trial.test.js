@@ -1,0 +1,609 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { deadCells, goalsMet, hintTier, lit, planRoomWalk, relicWord, resetAlignment, resonance, startRoom, stepRoom, walkOutcome } from '../src/games/trial.ts'
+import { STAR } from './star-fixture.js'
+import { KIND_NAMES, nextRoom, restartRoom, restartRun, restoreRun, restoreTrialRecords, runCleared, saveTrialRecords, signatureRoom, startRun, trialFor } from '../src/games/trials.ts'
+import { legendarySpecies } from '../src/generated/expedition.js'
+import { trialStages } from '../src/generated/trial-maps.js'
+import { solveRoom } from './trial-solver.js'
+
+const stage = (tiles, extra = {}) => ({ id: 't', kind: 'switch', tiles, warps: {}, open: '', crackAll: false, dark: false, par: 99, hint: '', star: null, ...extra })
+const press = (room, st, ...directions) => directions.reduce((result, direction) => stepRoom(result.room, st, direction), { room, move: 'none', events: [] })
+
+test('walls, water and rocks block and cost no move', () => {
+  const st = stage(['@#', '~R'])
+  const east = stepRoom(startRoom(st), st, 'east')
+  assert.equal(east.move, 'bump')
+  assert.equal(east.room.moves, 0)
+  assert.equal(east.room.facing, 'east')
+  assert.equal(east.room.message, 'A wall is in the way.')
+  assert.equal(stepRoom(startRoom(st), st, 'south').room.message, 'The water is too deep to cross.')
+})
+
+test('the buddy follows one tile behind', () => {
+  const st = stage(['@..'])
+  const { room } = press(startRoom(st), st, 'east', 'east')
+  assert.deepEqual(room.buddy, { x: 1, y: 0 })
+})
+
+test('the exit waits for every relic', () => {
+  const st = stage(['*@X'])
+  const locked = stepRoom(startRoom(st), st, 'east')
+  assert.deepEqual(locked.events, ['locked'])
+  assert.equal(locked.room.message, 'The seal holds. 1 relic remains.')
+  assert.deepEqual(locked.room.at, { x: 1, y: 0 })
+  assert.equal(goalsMet(locked.room, st), false)
+  const got = stepRoom(locked.room, st, 'west')
+  assert.ok(got.events.includes('relic'))
+  assert.deepEqual(got.room.relics, ['0,0'])
+  assert.equal(goalsMet(got.room, st), true)
+  const done = press(got.room, st, 'east', 'east')
+  assert.equal(done.room.status, 'cleared')
+  assert.ok(done.events.includes('clear'))
+})
+
+test('a relic is collected once', () => {
+  const st = stage(['*@.'])
+  const first = press(startRoom(st), st, 'west')
+  assert.deepEqual(first.events, ['relic'])
+  const back = press(first.room, st, 'east', 'west')
+  assert.deepEqual(back.events, [])
+  assert.deepEqual(back.room.relics, ['0,0'])
+})
+
+test('sight reveals a radius and remembers it', () => {
+  const row = ['@' + '.'.repeat(9)]
+  const seen = startRoom(stage(row)).seen
+  assert.ok(seen.includes('4,0'))
+  assert.ok(!seen.includes('5,0'))
+  const dark = stage(row, { dark: true })
+  const near = startRoom(dark).seen
+  assert.ok(near.includes('2,0'))
+  assert.ok(!near.includes('3,0'))
+  const walked = press(startRoom(dark), dark, 'east', 'east', 'east').room
+  assert.ok(walked.seen.includes('0,0'))
+  assert.ok(walked.seen.includes('5,0'))
+})
+
+test('torches light their own tiles in the dark', () => {
+  const st = stage(['@......!.'], { dark: true })
+  const tiles = lit(startRoom(st), st)
+  assert.ok(tiles.has('8,0'))
+  assert.ok(tiles.has('7,0'))
+  assert.ok(!tiles.has('5,0'))
+})
+
+test('a switch opens its gate group', () => {
+  const st = stage(['@aA.X'])
+  const first = stepRoom(startRoom(st), st, 'east')
+  assert.deepEqual(first.events, ['switch'])
+  assert.equal(first.room.open, 'A')
+  const done = press(first.room, st, 'east', 'east', 'east')
+  assert.equal(done.room.status, 'cleared')
+})
+
+test('stepping onto it again shuts the gate', () => {
+  const st = stage(['@aA'])
+  const shut = press(startRoom(st), st, 'east', 'west', 'east')
+  assert.equal(shut.room.open, '')
+  const bump = stepRoom(shut.room, st, 'east')
+  assert.equal(bump.move, 'bump')
+  assert.equal(bump.room.message, 'The gate is shut.')
+})
+
+test('standing or bumping never toggles', () => {
+  const st = stage(['@a#'])
+  const first = stepRoom(startRoom(st), st, 'east')
+  const second = stepRoom(first.room, st, 'east')
+  assert.equal(second.room.open, 'A')
+  assert.deepEqual(first.events, ['switch'])
+  assert.deepEqual(second.events, [])
+})
+
+test('gates listed in open start open', () => {
+  const st = stage(['@A.'], { open: 'A' })
+  assert.equal(stepRoom(startRoom(st), st, 'east').move, 'step')
+})
+
+test('three groups are independent', () => {
+  const st = stage(['@abcABC'])
+  const all = press(startRoom(st), st, 'east', 'east', 'east')
+  assert.equal(all.room.open, 'ABC')
+  assert.equal(stepRoom(all.room, st, 'west').room.open, 'AC')
+})
+
+test('leaving a fragile tile makes a hole', () => {
+  const st = stage(['@:.'])
+  const { room, events } = press(startRoom(st), st, 'east', 'east')
+  assert.deepEqual(events, ['crack'])
+  assert.deepEqual(room.holes, ['1,0'])
+})
+
+test('stepping into a hole falls', () => {
+  const st = stage(['@:.'])
+  const fell = press(startRoom(st), st, 'east', 'east', 'west')
+  assert.equal(fell.room.status, 'fell')
+  assert.deepEqual(fell.events, ['fall'])
+  assert.equal(fell.room.message, 'The floor gave way!')
+  assert.equal(stepRoom(fell.room, st, 'east').move, 'none')
+})
+
+test('crackAll rooms open only when every fragile tile is gone', () => {
+  const st = stage(['@:X', '.:#'], { crackAll: true })
+  const locked = press(startRoom(st), st, 'east', 'east')
+  assert.deepEqual(locked.events, ['locked'])
+  assert.equal(locked.room.message, 'Cross every cracked tile to open the way.')
+  const done = press(startRoom(st), st, 'south', 'east', 'north', 'east')
+  assert.equal(done.room.status, 'cleared')
+})
+
+test('restart is a fresh room', () => {
+  const st = stage(['@:.'])
+  const fell = press(startRoom(st), st, 'east', 'east', 'west').room
+  assert.equal(fell.status, 'fell')
+  assert.deepEqual(startRoom(st), startRoom(stage(['@:.'])))
+  assert.deepEqual(startRoom(st).holes, [])
+})
+
+test('open gates start sorted', () => {
+  assert.equal(startRoom(stage(['@AB'], { open: 'BA' })).open, 'AB')
+})
+
+test('walking into a boulder pushes it', () => {
+  const st = stage(['@O._'])
+  const pushed = stepRoom(startRoom(st), st, 'east')
+  assert.equal(pushed.move, 'push')
+  assert.deepEqual(pushed.room.boulders, ['2,0'])
+  assert.deepEqual(pushed.room.at, { x: 1, y: 0 })
+  assert.equal(pushed.room.moves, 1)
+  assert.deepEqual(pushed.room.buddy, { x: 0, y: 0 })
+})
+
+test('every plate held opens the doors for good', () => {
+  const st = stage(['@O._'])
+  const done = press(startRoom(st), st, 'east', 'east')
+  assert.deepEqual(done.room.boulders, ['3,0'])
+  assert.equal(done.room.doorsOpen, true)
+  assert.ok(done.events.includes('plates'))
+  const row = stage(['.@O_..'])
+  const off = press(startRoom(row), row, 'east', 'east')
+  assert.equal(off.room.doorsOpen, true)
+  assert.deepEqual(off.room.boulders, ['4,0'])
+})
+
+test('a sealed door blocks until then', () => {
+  const st = stage(['@=X'])
+  const bump = stepRoom(startRoom(st), st, 'east')
+  assert.equal(bump.move, 'bump')
+  assert.equal(bump.room.message, 'The stone door is sealed.')
+  const open = stage(['@=X'])
+  assert.equal(stepRoom({ ...startRoom(open), doorsOpen: true }, open, 'east').move, 'step')
+})
+
+test('a boulder will not go where it would be stuck', () => {
+  const st = stage(['#####', '#@O.#', '#...#', '#._.#', '#####'])
+  const dead = deadCells(st)
+  assert.ok(dead.has('3,1'))
+  assert.ok(!dead.has('2,2'))
+  const start = startRoom(st)
+  const bump = stepRoom(start, st, 'east')
+  assert.equal(bump.move, 'bump')
+  assert.equal(bump.room.message, 'The boulder would get stuck there.')
+  assert.deepEqual(bump.room.boulders, start.boulders)
+})
+
+test('boulders never enter gates or doors', () => {
+  for (const tile of ['A', '=', 'a', '1', ':', '*', 'X', 'R', '~']) {
+    const st = stage([`@O${tile}`], { open: 'A' })
+    const bump = stepRoom(startRoom(st), st, 'east')
+    assert.equal(bump.move, 'bump', tile)
+    assert.equal(bump.room.message, "The boulder won't fit through there.", tile)
+  }
+  const wall = stage(['@O#'])
+  assert.equal(stepRoom(startRoom(wall), wall, 'east').room.message, 'A wall is in the way.')
+})
+
+test('two boulders in a row do not move', () => {
+  const st = stage(['@OO.'])
+  const bump = stepRoom(startRoom(st), st, 'east')
+  assert.equal(bump.move, 'bump')
+  assert.deepEqual(bump.room.boulders, ['1,0', '2,0'])
+})
+
+test('without plates no cell is dead', () => {
+  assert.equal(deadCells(stage(['@O.#'])).size, 0)
+})
+test('a pad sends you to its pair', () => {
+  const st = stage(['@1.2X'], { warps: { 1: '2', 2: '1' } })
+  const warped = stepRoom(startRoom(st), st, 'east')
+  assert.equal(warped.move, 'warp')
+  assert.deepEqual(warped.room.at, { x: 3, y: 0 })
+  assert.deepEqual(warped.events, ['warp'])
+  assert.deepEqual(warped.room.warpsUsed, ['1'])
+  assert.deepEqual(warped.room.buddy, { x: 3, y: 0 })
+  assert.equal(stepRoom(warped.room, st, 'east').room.status, 'cleared')
+})
+
+test('arriving never chains', () => {
+  const st = stage(['@1.2.'], { warps: { 1: '2', 2: '1' } })
+  const warped = stepRoom(startRoom(st), st, 'east').room
+  assert.deepEqual(warped.at, { x: 3, y: 0 })
+  const back = press(warped, st, 'east', 'west')
+  assert.equal(back.move, 'warp')
+  assert.deepEqual(back.room.at, { x: 1, y: 0 })
+  assert.deepEqual(back.room.warpsUsed, ['1', '2'])
+})
+
+test('a pad with no entry is only a landing', () => {
+  const st = stage(['@1.2.'], { warps: { 1: '2' } })
+  const warped = stepRoom(startRoom(st), st, 'east').room
+  const back = press(warped, st, 'east', 'west')
+  assert.equal(back.move, 'step')
+  assert.deepEqual(back.room.at, { x: 3, y: 0 })
+})
+
+test('tap routes avoid hazards', () => {
+  const st = stage(['@:.', '...'])
+  const room = startRoom(st)
+  assert.deepEqual(planRoomWalk(room, st, { x: 2, y: 0 }), ['south', 'east', 'east', 'north'])
+  assert.deepEqual(planRoomWalk(room, st, { x: 1, y: 0 }), ['east'])
+  assert.deepEqual(planRoomWalk(room, st, { x: 0, y: 0 }), [])
+  const sw = stage(['@a.', '...'])
+  assert.deepEqual(planRoomWalk(startRoom(sw), sw, { x: 1, y: 0 }), ['east'])
+  assert.deepEqual(planRoomWalk(startRoom(sw), sw, { x: 2, y: 0 }), ['south', 'east', 'east', 'north'])
+  const pad = stage(['@1.'], { warps: { 1: '1' } })
+  assert.deepEqual(planRoomWalk(startRoom(pad), pad, { x: 1, y: 0 }), ['east'])
+})
+
+test('tap routes go around boulders or fail', () => {
+  const around = stage(['@O.', '...'])
+  assert.deepEqual(planRoomWalk(startRoom(around), around, { x: 2, y: 0 }), ['south', 'east', 'east', 'north'])
+  const shut = stage(['@O.'])
+  assert.equal(planRoomWalk(startRoom(shut), shut, { x: 2, y: 0 }), null)
+})
+
+test('tap on a wall walks to its nearest side', () => {
+  const st = stage(['@..#', '....'])
+  const room = startRoom(st)
+  assert.deepEqual(planRoomWalk(room, st, { x: 3, y: 0 }), ['east', 'east'])
+  const sealed = stage(['@#.'])
+  assert.equal(planRoomWalk(startRoom(sealed), sealed, { x: 2, y: 0 }), null)
+  assert.equal(planRoomWalk(startRoom(sealed), sealed, { x: 1, y: 0 }) !== null, true)
+})
+
+test('a relic is fine to stand on while pushing', () => {
+  const st = stage(['#.@.#', '#.O.#', '#*._#', '#####'])
+  assert.ok(!deadCells(st).has('2,2'))
+  const pushed = stepRoom(startRoom(st), st, 'south')
+  assert.equal(pushed.move, 'push')
+  assert.deepEqual(pushed.room.boulders, ['2,2'])
+})
+
+test('a warp reveals around both pads', () => {
+  const st = stage(['@1' + '.'.repeat(12) + '2'], { warps: { 1: '2' } })
+  const room = stepRoom(startRoom(st), st, 'east').room
+  assert.ok(room.seen.includes('5,0'))
+  assert.ok(room.seen.includes('14,0'))
+})
+
+const toN1 = ['east', 'north', 'north', 'north']
+const starWith = (star) => ({ ...STAR, star: { ...STAR.star, ...star } })
+
+test('a clue stone is read by walking into it', () => {
+  const first = stepRoom(startRoom(STAR), STAR, 'north')
+  assert.equal(first.move, 'bump')
+  assert.deepEqual(first.events, ['clue'])
+  assert.equal(first.room.message, 'One light alone, one point turned.')
+  assert.deepEqual(first.room.cluesRead, ['0,2'])
+  const second = stepRoom(first.room, STAR, 'north')
+  assert.equal(second.room.message, 'One light alone, one point turned.')
+  assert.deepEqual(second.room.cluesRead, ['0,2'])
+})
+
+test('crystals follow their rules', () => {
+  const a = press(startRoom(STAR), STAR, ...toN1)
+  assert.deepEqual(a.events, ['node'])
+  assert.deepEqual(a.room.lit, ['n1', 'n2'])
+  assert.equal(a.room.pattern, 0)
+  assert.equal(a.room.message, 'The crystal lights up, and its neighbours answer.')
+  const b = press(a.room, STAR, 'east', 'east')
+  assert.deepEqual(b.room.lit, ['n1'])
+  assert.equal(b.room.message, 'The crystal goes dark.')
+  assert.equal(b.room.pattern, 1)
+  const c = press(b.room, STAR, 'west', 'east')
+  assert.deepEqual(c.room.lit, ['n1', 'n2'])
+  assert.equal(c.room.pattern, 2)
+  const d = press(c.room, STAR, 'west', 'east')
+  assert.equal(d.room.pattern, 0)
+})
+
+test('the right alignment wakes the star', () => {
+  const { room, events } = press(startRoom(STAR), STAR, ...toN1, 'east', 'east', 'south')
+  assert.equal(room.status, 'cleared')
+  assert.ok(events.includes('clear'))
+})
+
+test('a wrong attune only counts and answers', () => {
+  const before = press(startRoom(STAR), STAR, 'east', 'north').room
+  const { room, events, move } = stepRoom(before, STAR, 'east')
+  assert.equal(move, 'bump')
+  assert.deepEqual(events, ['attune'])
+  assert.equal(room.status, 'playing')
+  assert.equal(room.attunes, 1)
+  assert.equal(room.message, 'The meteorite flickers. 2 of 4 lights answer.')
+  assert.deepEqual(room.at, before.at)
+  assert.equal(room.moves, before.moves)
+  assert.deepEqual(room.seen, before.seen)
+  assert.deepEqual(room.cluesRead, before.cluesRead)
+  assert.deepEqual(room.lit, before.lit)
+})
+
+test('resetOnFail puts only the crystals back', () => {
+  const st = starWith({ resetOnFail: true })
+  const read = press(startRoom(st), st, 'north').room
+  const lit1 = press(read, st, 'east', 'north', 'north', 'north').room
+  assert.deepEqual(lit1.lit, ['n1', 'n2'])
+  const wrong = press(lit1, st, 'east', 'south').room
+  assert.equal(wrong.attunes, 1)
+  assert.deepEqual(wrong.lit, [])
+  assert.equal(wrong.pattern, 0)
+  assert.deepEqual(wrong.cluesRead, ['0,2'])
+  assert.deepEqual(wrong.at, { x: 2, y: 0 })
+})
+
+test('reset the crystals keeps the island', () => {
+  const read = press(startRoom(STAR), STAR, 'north', 'east', 'north', 'north', 'north').room
+  const attuned = press(read, STAR, 'east', 'south').room
+  assert.equal(attuned.attunes, 1)
+  assert.deepEqual(attuned.lit, ['n1', 'n2'])
+  const after = resetAlignment(attuned, STAR)
+  assert.deepEqual(after.lit, [])
+  assert.equal(after.pattern, 0)
+  for (const field of ['at', 'seen', 'cluesRead', 'open', 'attunes', 'moves']) assert.deepEqual(after[field], attuned[field])
+})
+
+test('a crystal opens its passage for good', () => {
+  const st = stage(['@%A.'], { kind: 'star', star: { nodes: [{ id: 'n1', at: [1, 0], links: [], turns: 0, opens: 'A' }], patterns: 1, startLit: [],
+    target: { lit: ['n1'], pattern: 0 }, resetOnFail: false, clues: [], hints: ['a', 'b', 'c'] } })
+  const on = press(startRoom(st), st, 'east').room
+  assert.equal(on.open, 'A')
+  assert.equal(on.message, 'The crystal lights up. A passage opens.')
+  const off = press(on, st, 'west', 'east').room
+  assert.deepEqual(off.lit, [])
+  assert.equal(off.message, 'The crystal goes dark.')
+  assert.equal(off.open, 'A')
+  assert.equal(resetAlignment(off, st).open, 'A')
+})
+
+test('hints unlock every two misses', () => {
+  const tier = (attunes) => hintTier({ ...startRoom(STAR), attunes })
+  assert.deepEqual([1, 2, 4, 6, 9].map(tier), [0, 1, 2, 3, 3])
+})
+
+test('resonance counts crystals and the pattern', () => {
+  assert.deepEqual(resonance(startRoom(STAR), STAR), { matching: 2, total: 4 })
+  assert.deepEqual(resonance({ ...startRoom(STAR), lit: ['n1'], pattern: 1 }, STAR), { matching: 4, total: 4 })
+})
+
+test('a crystal lit through a link opens its passage', () => {
+  const nodes = [{ id: 'n1', at: [1, 0], links: [], turns: 0, opens: 'A' }, { id: 'n2', at: [2, 1], links: ['n1'], turns: 0 }]
+  const st = stage(['.%A', '@.%'], { kind: 'star', star: { nodes, patterns: 1, startLit: [], target: { lit: [], pattern: 0 }, resetOnFail: false, clues: [], hints: ['a', 'b', 'c'] } })
+  const { room } = press(startRoom(st), st, 'east', 'east')
+  assert.deepEqual(room.lit, ['n1', 'n2'])
+  assert.equal(room.open, 'A')
+})
+
+test('a crystal that starts lit starts with its passage open', () => {
+  const st = stage(['@%A'], { kind: 'star', star: { nodes: [{ id: 'n1', at: [1, 0], links: [], turns: 0, opens: 'A' }], patterns: 1, startLit: ['n1'],
+    target: { lit: ['n1'], pattern: 0 }, resetOnFail: false, clues: [], hints: ['a', 'b', 'c'] } })
+  assert.equal(startRoom(st).open, 'A')
+})
+
+test('tap-to-walk treats crystals as destinations and clues and the meteorite as walls', () => {
+  const room = startRoom(STAR)
+  assert.deepEqual(planRoomWalk(room, STAR, { x: 1, y: 0 }), ['east', 'north', 'north', 'north'])
+  assert.deepEqual(planRoomWalk(room, STAR, { x: 2, y: 2 }), ['east', 'east'])
+  assert.deepEqual(planRoomWalk(room, STAR, { x: 0, y: 2 }), [])
+})
+
+const KINDS = {
+  switch: ['Zapdos', 'Raikou', 'Dialga', 'Ho-Oh', 'Jirachi', 'Magearna', 'Zeraora', 'Arceus'],
+  crumble: ['Articuno', 'Moltres', 'Latias', 'Latios', 'Rayquaza', 'Heatran'],
+  dark: ['Entei', 'Regice', 'Celebi', 'Kyogre', 'Giratina', 'Darkrai', 'Cresselia', 'Zygarde'],
+  temple: ['Lugia', 'Groudon', 'Regirock', 'Regigigas', 'Shaymin', 'Diancie', 'Phione', 'Manaphy'],
+  warp: ['Mewtwo', 'Mew', 'Suicune', 'Registeel', 'Uxie', 'Mesprit', 'Azelf', 'Palkia'],
+  star: ['Deoxys']
+}
+
+test('every Legendary has a themed trial of its kind', () => {
+  const kinds = new Set()
+  for (const name of legendarySpecies) {
+    const trial = trialFor(name, {})
+    const kind = Object.keys(KINDS).find(k => KINDS[k].includes(name))
+    assert.ok(kind, `${name} is in the table`)
+    assert.notEqual(trial.title, `${name}’s Shrine`)
+    assert.equal(trial.kind, kind)
+    assert.ok(trial.lore.length > 0)
+    kinds.add(trial.kind)
+  }
+  assert.deepEqual([...kinds].sort(), Object.keys(KINDS).sort())
+  assert.equal(trialFor('Rayquaza', {}).title, 'Sky Pillar Ascent')
+  assert.deepEqual(Object.keys(KIND_NAMES).sort(), Object.keys(KINDS).sort())
+  const unknown = trialFor('Nobody', {})
+  assert.deepEqual([unknown.title, unknown.kind], ['Nobody’s Shrine', 'switch'])
+})
+
+test("room order follows the player's own clears", () => {
+  // The shared main rooms are retired: a shrine with no room of its own plays only its kind's tutorial.
+  assert.deepEqual(trialFor('Missingno', {}).stages, ['switch-tutorial'])
+  const records = { 'switch-tutorial': 12, 'switch-1': 60 }
+  assert.deepEqual(trialFor('Missingno', records).stages, ['switch-tutorial'])
+  assert.deepEqual(trialFor('Zapdos', {}).stages, ['switch-tutorial', 'sig-zapdos'], 'A signature room comes after its kind’s tutorial')
+  assert.deepEqual(trialFor('Zapdos', records).stages, ['sig-zapdos'], 'and is played every time, whatever else is cleared')
+  assert.deepEqual(trialFor('Articuno', { 'crumble-tutorial': 9 }).stages, ['sig-articuno'])
+  assert.deepEqual(trialFor('Mew', { 'switch-tutorial': 5 }).stages, ['warp-tutorial', 'sig-mew'], 'Records of another kind do not count')
+  for (const anything of [{}, { star: 90 }]) {
+    const trial = trialFor('Deoxys', anything)
+    assert.deepEqual([trial.stages, trial.kind, trial.title], [['star'], 'star', 'Shattered Star'])
+  }
+  for (const name of legendarySpecies) for (const id of trialFor(name, {}).stages) assert.ok(trialStages[id], id)
+})
+
+const walk = (run, ...directions) => directions.reduce((current, direction) => ({ ...current, room: stepRoom(current.room, trialStages[current.stages[current.index]], direction).room }), run)
+
+test('a run survives a save and reload', () => {
+  const run = walk(startRun(['switch-tutorial', 'sig-zapdos']), 'east', 'east')
+  assert.equal(run.room.moves, 2)
+  assert.deepEqual(restoreRun(JSON.parse(JSON.stringify(run))), run)
+  const star = walk(startRun(['star']), 'east', 'north')
+  assert.deepEqual(restoreRun(JSON.parse(JSON.stringify(star))), star)
+})
+
+test('a run that no longer fits the rooms is dropped', () => {
+  const run = walk(startRun(['switch-tutorial', 'sig-zapdos']), 'east')
+  const edit = (change, base = run) => { const copy = JSON.parse(JSON.stringify(base)); change(copy); return copy }
+  assert.notEqual(restoreRun(edit(() => {})), null)
+  const bad = [
+    edit(r => { r.stages = ['nope', 'sig-zapdos'] }),
+    edit(r => { r.stages = ['switch-tutorial', 'switch-1'] }),
+    edit(r => { r.index = 5 }),
+    edit(r => { r.index = 1 }),
+    edit(r => { r.stages = [] }),
+    edit(r => { r.room.boulders = ['0,0'] }),
+    edit(r => { r.room.at = { x: 99, y: 0 } }),
+    edit(r => { r.room.at = { x: 0, y: 0 } }),
+    edit(r => { r.room.at = { x: 1.5, y: 1 } }),
+    edit(r => { r.room.open = 'Z' }),
+    edit(r => { r.room.moves = -1 }),
+    edit(r => { r.room.moves = 1.5 }),
+    edit(r => { r.room.status = 'won' }),
+    edit(r => { r.room.relics = 'x' }),
+    edit(r => { r.room.lit = ['n1'] }),
+    edit(r => { r.room.pattern = 1 }),
+    edit(r => { r.results = { 'switch-tutorial': -2 } }),
+    edit(r => { r.results = { nope: 2 } }),
+    edit(r => { r.room.stage = 'sig-zapdos' }),
+    edit(r => { r.room.facing = 'up' }),
+    edit(r => { r.room.cluesRead = ['1,1'] })
+  ]
+  bad.forEach((raw, i) => assert.equal(restoreRun(raw), null, `case ${i}`))
+  const star = walk(startRun(['star']), 'east')
+  assert.notEqual(restoreRun(JSON.parse(JSON.stringify(star))), null)
+  assert.equal(restoreRun(edit(r => { r.room.lit = ['n9'] }, star)), null)
+  assert.equal(restoreRun(edit(r => { r.room.pattern = 7 }, star)), null)
+  assert.equal(restoreRun(edit(r => { r.room.cluesRead = ['0,0'] }, star)), null)
+  assert.equal(restoreRun(edit(r => { r.room.boulders = ['4,4'] }, star)), null, 'the star has no boulders')
+  for (const garbage of [null, undefined, 3, 'x', [], {}, { stages: ['star'], index: 0 }, { stages: 'star', index: 0, room: {}, results: {} }, { stages: ['star'], index: 0, room: null, results: {} }]) {
+    assert.equal(restoreRun(garbage), null)
+  }
+})
+
+test('records keep the best', () => {
+  assert.deepEqual(saveTrialRecords({ a: 50 }, { a: 60, b: 70 }), { a: 50, b: 70 })
+  assert.deepEqual(saveTrialRecords({ a: 50 }, { a: 40 }), { a: 40 })
+  assert.deepEqual(restoreTrialRecords({ 'switch-1': 40, nope: 3, 'crumble-1': -1, 'dark-1': 'x', 'warp-1': 2.5 }), { 'switch-1': 40 })
+  // Best moves in the retired shared rooms are kept, though the rooms are gone; rooms that never were are not.
+  assert.equal(trialStages['switch-1'], undefined)
+  assert.deepEqual(restoreTrialRecords({ 'temple-3': 70, 'switch-4': 10, 'sig-zapdos': 50 }), { 'temple-3': 70, 'sig-zapdos': 50 })
+  for (const garbage of [null, 4, 'x', []]) assert.deepEqual(restoreTrialRecords(garbage), {})
+})
+
+test('moving through the rooms of a run', () => {
+  let run = startRun(['switch-tutorial', 'sig-zapdos'])
+  assert.deepEqual([run.index, run.room.stage, run.results], [0, 'switch-tutorial', {}])
+  assert.equal(runCleared(run), false)
+  const moved = walk(run, 'east', 'east')
+  assert.equal(restartRoom(moved).room.moves, 0)
+  assert.deepEqual(restartRoom({ ...moved, results: { x: 1 } }).results, { x: 1 })
+  assert.deepEqual(restartRun({ ...moved, index: 1 }), run)
+  run = nextRoom(moved)
+  assert.deepEqual([run.index, run.room.stage, run.results], [1, 'sig-zapdos', { 'switch-tutorial': 2 }])
+  assert.equal(runCleared(run), false)
+  const last = { ...run, room: { ...run.room, status: 'cleared', moves: 33 } }
+  assert.equal(runCleared(last), true)
+  assert.equal(runCleared({ ...last, index: 0 }), false)
+  const done = nextRoom(last)
+  assert.deepEqual([done.index, done.room, done.results], [1, last.room, { 'switch-tutorial': 2, 'sig-zapdos': 33 }])
+})
+
+test('a saved run must use canonical keys and a cleared room must end on its exit', () => {
+  const run = walk(startRun(['switch-tutorial', 'sig-zapdos']), 'east')
+  const edit = (change, base = run) => { const copy = JSON.parse(JSON.stringify(base)); change(copy); return copy }
+  assert.notEqual(restoreRun(edit(r => { r.room.seen = ['1,1'] })), null)
+  assert.equal(restoreRun(edit(r => { r.room.seen = ['01,1'] })), null, 'Leading zeros are not a canonical key')
+  assert.equal(restoreRun(edit(r => { r.room.seen = ['1,01'] })), null)
+  assert.equal(restoreRun(edit(r => { r.room.status = 'cleared' })), null, 'Cleared away from the exit')
+  const tiles = trialStages['switch-tutorial'].tiles
+  const y = tiles.findIndex(row => row.includes('X'))
+  const exit = { x: tiles[y].indexOf('X'), y }
+  assert.notEqual(restoreRun(edit(r => { r.room.status = 'cleared'; r.room.at = exit })), null)
+  const star = walk(startRun(['star']), 'west')
+  assert.equal(restoreRun(edit(r => { r.room.status = 'cleared' }, star)), null, 'The star is not woken from afar')
+  const sy = trialStages.star.tiles.findIndex(row => row.includes('M'))
+  const sx = trialStages.star.tiles[sy].indexOf('M')
+  assert.notEqual(restoreRun(edit(r => { r.room.status = 'cleared'; r.room.at = { x: sx - 1, y: sy } }, star)), null, 'Beside the meteorite')
+})
+
+test('tap routes in the dark only run over tiles already seen', () => {
+  const st = stage(['@...'], { dark: true })
+  const room = { ...startRoom(st), seen: ['0,0', '1,0', '3,0'] }
+  assert.equal(planRoomWalk(room, st, { x: 3, y: 0 }), null)
+  assert.deepEqual(planRoomWalk({ ...room, seen: [...room.seen, '2,0'] }, st, { x: 3, y: 0 }), ['east', 'east', 'east'])
+  const lit = stage(['@...'])
+  assert.deepEqual(planRoomWalk({ ...startRoom(lit), seen: [] }, lit, { x: 3, y: 0 }), ['east', 'east', 'east'])
+})
+
+test('a plain bump costs step time and keeps input; eventful ones let go', () => {
+  const wall = stage(['@#'])
+  const bump = stepRoom(startRoom(wall), wall, 'east')
+  assert.deepEqual(walkOutcome(bump), { moved: true, stop: true, drop: false })
+  assert.deepEqual(walkOutcome({ move: 'none', events: [] }), { moved: false, stop: false, drop: false })
+  for (const event of ['attune', 'clue', 'locked']) assert.deepEqual(walkOutcome({ move: 'bump', events: [event] }), { moved: true, stop: true, drop: true }, event)
+  assert.deepEqual(walkOutcome({ move: 'step', events: ['crack'] }), { moved: true, stop: false, drop: false })
+  assert.deepEqual(walkOutcome({ move: 'step', events: [] }), { moved: true, stop: false, drop: false })
+  assert.deepEqual(walkOutcome({ move: 'warp', events: ['warp'] }), { moved: true, stop: true, drop: true })
+  assert.equal(walkOutcome({ move: 'step', events: ['relic'] }).stop, true)
+  assert.equal(walkOutcome({ move: 'step', events: ['switch'] }).stop, true)
+})
+
+test('signature rooms belong to their Legendary, name their own relics and clear with their own words', () => {
+  for (const name of ['Articuno', 'Zapdos', 'Moltres', 'Kyogre', 'Groudon', 'Rayquaza', 'Raikou', 'Entei', 'Suicune', 'Regirock', 'Regice', 'Registeel', 'Regigigas', 'Latias', 'Latios', 'Uxie', 'Mesprit', 'Azelf', 'Dialga', 'Palkia', 'Giratina']) {
+    const id = `sig-${name.toLowerCase()}`
+    assert.equal(signatureRoom(name), id)
+    assert.equal(trialStages[id].legendary, name)
+  }
+  assert.equal(signatureRoom('Missingno'), null, 'A shrine with no room of its own')
+  for (const name of legendarySpecies) {
+    if (name === 'Deoxys') continue
+    const id = signatureRoom(name)
+    assert.ok(id, `${name} has a room of its own`)
+    assert.equal(trialStages[id].kind, trialFor(name, {}).kind, `${name}: its room is of its trial's kind, so the tutorial before it teaches it`)
+  }
+  const ember = trialStages['sig-moltres']
+  assert.equal(relicWord(ember, 1), 'ember')
+  assert.equal(relicWord(ember, 3), 'embers')
+  assert.equal(relicWord(trialStages['switch-tutorial'], 2), 'relics')
+  // Walk onto lava: its own refusal, not the water's.
+  const lava = ember.tiles.findIndex(row => row.includes('~'))
+  const start = startRoom(ember)
+  const toward = stepRoom({ ...start, at: { x: 1, y: lava } }, ember, 'east').room
+  assert.match(toward.message, /lava/)
+  // The minimum route clears with the room's own line, and finds embers along the way.
+  const messages = []
+  let room = startRoom(ember)
+  for (const direction of solveRoom(ember).route) { room = stepRoom(room, ember, direction).room; if (room.message) messages.push(room.message) }
+  assert.equal(room.status, 'cleared')
+  assert.equal(room.message, ember.flavor.clear)
+  assert.ok(messages.some(message => /You found an ember! 2 to go\./.test(message)), 'An ember, with its article')
+})
+
+test("Kyogre's currents run one way, so its pearls take the whole loop twice", () => {
+  const sea = trialStages['sig-kyogre']
+  const pads = Object.keys(sea.warps)
+  for (const pad of pads) assert.ok(!Object.hasOwn(sea.warps, sea.warps[pad]), `current ${pad} lands on a pad that does not lead straight back`)
+  const { route } = solveRoom(sea)
+  let room = startRoom(sea), rides = 0
+  for (const direction of route) { const result = stepRoom(room, sea, direction); room = result.room; if (result.move === 'warp') rides++ }
+  assert.equal(room.status, 'cleared')
+  assert.ok(rides > pads.length, `the shortest way rides ${rides} currents: the loop more than once`)
+})

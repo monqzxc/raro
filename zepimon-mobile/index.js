@@ -1,0 +1,9 @@
+// The app entry. The adventure tracker defines its background location task here, before Expo Router: Android can
+// start the app in the background just to deliver locations, and then no screen (and no layout) ever loads.
+import './src/tracker'
+
+// Normalize static-export URLs before Expo Router reads the current path.
+import './src/normalize-web-path'
+
+// Expo Router's entry goes last.
+import 'expo-router/entry'

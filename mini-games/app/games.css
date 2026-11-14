@@ -1,0 +1,123 @@
+.games-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--background); color: var(--foreground); }
+.games-topbar, .games-main, .games-footer { width: min(1160px, calc(100% - 80px)); margin-inline: auto; }
+.games-topbar { display: flex; align-items: center; justify-content: space-between; min-height: 88px; gap: 20px; border-bottom: 1px solid var(--border); }
+.games-wordmark-label { color: var(--muted-foreground); font-size: 12px; padding-left: 20px; border-left: 1px solid var(--border); }
+.games-tabs { display: flex; align-items: center; gap: 5px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--card) 75%, transparent); }
+.games-tab { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 17px; border: 0; border-radius: 7px; color: var(--muted-foreground); background: transparent; font-size: 13px; font-weight: 600; transition: background .2s, color .2s; }
+.games-tab[aria-selected="true"] { color: var(--foreground); background: color-mix(in srgb, var(--primary) 17%, var(--card)); }
+.games-tab:hover:not([aria-selected="true"]) { color: var(--foreground); }
+.games-main { flex: 1; padding-block: 48px 64px; }
+.games-intro { margin-bottom: 38px; }
+.games-intro h1 { margin: 0 0 12px; font-size: clamp(36px, 4.5vw, 58px); line-height: 1.15; letter-spacing: -.04em; font-weight: 650; }
+.games-intro h1 span { color: var(--primary); }
+.games-intro p { color: var(--muted-foreground); font-size: 15px; line-height: 1.8; margin: 0; max-width: 65ch; }
+.games-kicker, .dex-kicker { display: flex; align-items: center; gap: 8px; margin: 0 0 13px !important; color: var(--primary) !important; font: 11px/1.5 var(--font-mono); letter-spacing: .12em; }
+.games-intro .games-kicker, .games-intro .dex-kicker { font: 11px/1.5 var(--font-mono); }
+.dex-content .games-intro { margin-bottom: 28px; }
+.dex-content .games-intro h1 span { color: #b79aff; }
+.dex-stats { display: flex; align-items: center; gap: 34px; margin-bottom: 24px; padding: 18px 22px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--card) 80%, transparent); }
+.dex-stat { display: grid; gap: 3px; }
+.dex-stat strong { font-size: 23px; line-height: 1.1; font-weight: 700; letter-spacing: -.04em; }
+.dex-stat strong span, .dex-stat small { color: var(--muted-foreground); }
+.dex-stat small { font-size: 11px; }
+.dex-save-label { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted-foreground); font: 10px var(--font-mono); letter-spacing: .08em; }
+.dex-save-dot { width: 7px; height: 7px; border-radius: 50%; background: #86d17a; box-shadow: 0 0 12px #86d17a80; }
+.dex-hunt { position: relative; display: flex; justify-content: space-between; align-items: center; min-height: 236px; overflow: hidden; margin-bottom: 40px; padding: 32px 38px; border: 1px solid #47405d; border-radius: 14px; background: radial-gradient(ellipse at 82% 50%, #55406c70, transparent 38%), linear-gradient(110deg, #211e31, #171625 75%); }
+.dex-hunt-copy { position: relative; z-index: 1; max-width: 62%; }
+.dex-hunt-eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #c9b8ff; font: 10px var(--font-mono); letter-spacing: .1em; }
+.dex-hunt-copy h2 { margin: 12px 0 7px; font-size: clamp(23px, 3vw, 34px); letter-spacing: -.04em; }
+.dex-hunt-copy p { margin: 0 0 18px; color: var(--muted-foreground); font-size: 13px; line-height: 1.6; }
+.dex-hunt-copy .dex-storage-error { color: #ffb1a8; }
+.dex-action { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 0 17px; border: 1px solid var(--primary); border-radius: 7px; color: #171126; background: var(--primary); font-size: 13px; font-weight: 700; transition: transform .2s, background .2s; }
+.dex-action:hover:not(:disabled) { transform: translateY(-2px); background: #cab7ff; }
+.dex-action:disabled { opacity: .65; }
+.dex-hunt-art { position: absolute; right: 12%; bottom: -3px; width: 176px; height: 176px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle, #b79aff1c, transparent 68%); color: #c6b5ff; }
+.dex-wild-sprite { width: 132px; filter: drop-shadow(0 10px 12px #0008); }
+.dex-grass-mark { font-size: 100px; line-height: 1; opacity: .3; text-shadow: 0 0 35px #b79aff; }
+.dex-shiny-mark { position: absolute; top: 20px; right: 8px; color: #ffe486; font-size: 25px; text-shadow: 0 0 14px #ffe486; }
+.dex-grid-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+.dex-grid-heading h2 { margin: 0 0 5px; font-size: 21px; letter-spacing: -.03em; }
+.dex-grid-heading p { margin: 0; color: var(--muted-foreground); font-size: 12px; line-height: 1.6; }
+.dex-grid-heading > span { flex-shrink: 0; color: var(--muted-foreground); font: 12px var(--font-mono); }
+.dex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.dex-card { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; min-height: 166px; padding: 13px 10px 12px; border: 1px solid var(--border); border-radius: 11px; background: color-mix(in srgb, var(--card) 80%, transparent); text-align: center; }
+.dex-card-art { position: relative; width: 100%; height: 91px; display: grid; place-items: center; }
+.dex-card-sprite { width: 80px; }
+.dex-card.is-undiscovered .dex-card-sprite { filter: brightness(0) opacity(.55); }
+.dex-card > strong { max-width: 100%; overflow: hidden; color: var(--foreground); font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.dex-card > span { margin-top: 5px; color: var(--muted-foreground); font-size: 9px; line-height: 1.4; }
+.dex-card-shiny { position: absolute; top: 4px; right: 12px; color: #ffe486; font-size: 14px; text-shadow: 0 0 8px #ffe486; }
+.games-library-heading, .games-section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; margin-bottom: 20px; }
+.games-library-heading h2 { font-size: 18px; font-weight: 600; letter-spacing: -.02em; margin: 0; }
+.games-library-heading > span { color: var(--muted-foreground); font-size: 12px; }
+.games-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 22px; }
+.games-list > li { min-width: 0; }
+.game-card { display: flex; flex-direction: column; height: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--background) 94%, var(--primary)); transition: border-color .2s ease; }
+.game-card:hover { border-color: color-mix(in srgb, var(--primary) 65%, transparent); }
+.game-card:focus-visible, .games-browse-link:focus-visible, .games-page a:focus-visible { outline: 2px solid var(--primary); outline-offset: 5px; }
+.game-card-art { position: relative; height: 250px; overflow: hidden; background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--primary) 17%, transparent), transparent 75%); }
+.game-card-art .pokemon-sprite { position: absolute; z-index: 1; filter: drop-shadow(0 12px 10px #0006); transition: transform .4s cubic-bezier(.22, 1, .36, 1); }
+.game-card-art.game-art-laser-grid-lock { background-color: #111624; background-image: linear-gradient(90deg, #121827dd, #17182777), linear-gradient(#b79aff16 1px, transparent 1px), linear-gradient(90deg, #b79aff16 1px, transparent 1px); background-size: auto, 40px 40px, 40px 40px; }
+.game-art-laser-grid-lock::before { position: absolute; inset: 20% 12%; border: 1px solid #b79aff4d; content: ""; }
+.game-art-laser-grid-lock::after { position: absolute; top: 50%; right: 14%; width: 42px; aspect-ratio: 1; border: 2px solid #9de4ff; border-radius: 50%; box-shadow: 0 0 22px #79d8ff99, inset 0 0 14px #79d8ff55; content: ""; transform: translateY(-50%); }
+.game-card-art.game-art-raft { background: radial-gradient(ellipse at 50% 100%, #3694b533, transparent 72%), linear-gradient(180deg, #152233, #132130 72%, #172f42); }
+.game-art-raft::before { position: absolute; right: -8%; bottom: -34px; left: -8%; height: 94px; border: 1px solid #70c4e344; border-radius: 50%; background: repeating-linear-gradient(180deg, transparent 0 13px, #70c4e31c 14px 15px); box-shadow: 0 -12px 0 -11px #70c4e344, 0 -24px 0 -23px #70c4e322; content: ""; transform: rotate(-3deg); }
+.game-card-art.game-art-puzzle { background: radial-gradient(ellipse at 50% 100%, #a88be522, transparent 75%), #181625; }
+.game-art-puzzle::before { position: absolute; inset: 13% 20%; border: 1px solid #b79aff55; background-image: linear-gradient(#b79aff20 1px, transparent 1px), linear-gradient(90deg, #b79aff20 1px, transparent 1px); background-size: 25% 25%; content: ""; transform: rotate(-4deg); }
+.game-art-puzzle::after { position: absolute; top: 15%; right: 18%; width: 18px; aspect-ratio: 1; border: 1px solid #e8d9ff99; background: #b79aff33; content: ""; transform: rotate(12deg); }
+.game-card-art[class*="game-art-zepimon-"] { background: radial-gradient(ellipse at 50% 100%, #81b86c3b, transparent 72%), linear-gradient(180deg, #1a2e2c, #17261f); }
+.game-card-art[class*="game-art-zepimon-"]::before { position: absolute; inset: 20% 12%; border: 1px solid #b5d68b55; border-radius: 48% 42% 52% 38%; background: repeating-linear-gradient(135deg, transparent 0 22px, #b5d68b13 23px 24px); content: ""; transform: rotate(-8deg); }
+.game-card:not(:hover) .game-card-art .pokemon-sprite-sheet { animation-duration: 1.4s; }
+/* Whole multiples of the 44px sprite keep every pixel square. */
+.game-art-first { width: 176px; left: calc(50% - 176px); top: 30px; }
+.game-art-second { width: 132px; left: calc(50% + 14px); top: 74px; transform: scaleX(-1); }
+.game-card:hover .game-art-first { transform: translateY(-8px); }
+.game-card:hover .game-art-second { transform: scaleX(-1) translateY(-5px); }
+.game-card-copy { display: flex; flex-direction: column; flex: 1; padding: 24px 28px; border-top: 1px solid var(--border); }
+.game-card-copy h2, .game-card-copy h3 { font-size: 25px; font-weight: 600; letter-spacing: -.03em; line-height: 1.3; margin: 0 0 10px; color: var(--foreground); }
+.game-card-copy p { font-size: 14px; line-height: 1.8; color: var(--muted-foreground); margin: 0 0 23px; max-width: 65ch; }
+.game-card-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; color: var(--muted-foreground); font-size: 11px; margin-top: auto; }
+.game-card-footer > span { display: inline-flex; align-items: center; gap: 6px; }
+.game-card-footer .game-card-play { margin-left: auto; color: var(--primary); font-size: 13px; font-weight: 600; }
+.games-footer { border-top: 1px solid var(--border); padding-block: 24px; display: flex; justify-content: space-between; gap: 24px; color: var(--muted-foreground); font-size: 10px; line-height: 1.8; }
+.games-footer a { text-decoration: underline; text-underline-offset: 3px; }
+.zepimon-page { min-height: 100vh; display: flex; flex-direction: column; padding: 18px max(16px, calc((100% - 1160px) / 2)) 24px; background: var(--background); color: var(--foreground); }
+.zepimon-page-header { display: flex; align-items: center; justify-content: space-between; min-height: 52px; gap: 16px; }
+.zepimon-back { display: inline-flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 13px; font-weight: 600; }
+.zepimon-back:hover { color: var(--foreground); }
+.zepimon-page-label { margin: 0; color: var(--muted-foreground); font: 10px var(--font-mono); letter-spacing: .12em; }
+.zepimon-frame { display: block; width: 100%; height: calc(100vh - 94px); min-height: 620px; border: 1px solid var(--border); border-radius: 14px; background: var(--background); }
+.games-teaser { margin-top: 42px; pointer-events: auto; }
+.games-section-heading { align-items: center; }
+.games-section-heading h2 { font-size: 30px; line-height: 1.2; font-weight: 600; letter-spacing: -.03em; margin: 0 0 8px; }
+.games-section-heading p { color: var(--muted-foreground); font-size: 14px; line-height: 1.7; margin: 0; }
+.games-browse-link { flex-shrink: 0; color: var(--primary); }
+.games-teaser .game-card-art { height: 210px; }
+.games-teaser .game-art-first { width: 154px; left: calc(50% - 158px); top: 24px; }
+.games-teaser .game-art-second { width: 110px; left: calc(50% + 14px); top: 68px; }
+@media (max-width: 900px) { .games-topbar, .games-main, .games-footer { width: calc(100% - 48px); } .game-card-art { height: 220px; } .game-art-first { width: 154px; left: calc(50% - 158px); } .game-art-second { width: 110px; left: calc(50% + 14px); } .game-card-copy { padding: 22px; } }
+@media (max-width: 600px) { .games-topbar, .games-main, .games-footer { width: calc(100% - 32px); } .games-topbar { min-height: 75px; gap: 12px; } .games-wordmark-label { display: none; } .games-back { font-size: 12px; } .games-main { padding-block: 32px 40px; } .games-intro { margin-bottom: 30px; } .games-intro p { font-size: 13px; } .games-library-heading { gap: 12px; } .games-library-heading > span { font-size: 11px; } .games-list { gap: 18px; } .game-card-copy h2, .game-card-copy h3 { font-size: 23px; } .game-card-copy p { font-size: 13px; } .games-footer { flex-direction: column; gap: 6px; } .games-section-heading { gap: 14px; } .games-section-heading h2 { font-size: 27px; } .games-section-heading p { font-size: 12px; } .games-browse-link { font-size: 12px; } }
+@media (max-width: 600px) {
+  .games-topbar { min-height: 72px; }
+  .games-tabs { gap: 2px; padding: 3px; }
+  .games-tab { min-height: 40px; gap: 6px; padding-inline: 12px; font-size: 12px; }
+  .games-tab svg { width: 15px; height: 15px; }
+  .games-main { padding-block: 30px 42px; }
+  .games-intro { margin-bottom: 28px; }
+  .dex-stats { gap: 16px; padding: 15px; }
+  .dex-stat strong { font-size: 20px; }
+  .dex-stat small { font-size: 10px; }
+  .dex-save-label { gap: 6px; font-size: 8px; letter-spacing: .04em; }
+  .dex-hunt { min-height: 216px; padding: 24px 20px; }
+  .dex-hunt-copy { max-width: 72%; }
+  .dex-hunt-copy h2 { font-size: 23px; }
+  .dex-hunt-art { right: -22px; width: 135px; height: 150px; }
+  .dex-wild-sprite { width: 108px; }
+  .dex-grid { grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 9px; }
+  .dex-card { min-height: 155px; padding-inline: 7px; }
+  .zepimon-page { padding: 8px 0 0; }
+  .zepimon-page-header { padding-inline: 16px; }
+  .zepimon-page-label { font-size: 9px; }
+  .zepimon-frame { height: calc(100dvh - 68px); min-height: 560px; border-inline: 0; border-radius: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .game-card, .game-card-art .pokemon-sprite { transition: none; } .game-card-art .pokemon-sprite-sheet { animation: none; } .game-card:hover .game-art-first { transform: none; } .game-card:hover .game-art-second { transform: scaleX(-1); } }

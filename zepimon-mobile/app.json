@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "Zepimon",
+    "slug": "zepimon-mobile",
+    "version": "1.18.31",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "zepimon",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zepimon.companion"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#0B1F3A"
+      },
+      "package": "com.zepimon.companion",
+      "versionCode": 80,
+      "permissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Zepimon uses your location while you record an adventure, to measure your distance and draw your route. Your route stays on this phone.",
+          "locationAlwaysAndWhenInUsePermission": "Zepimon uses your location while you record an adventure, to measure your distance and draw your route. Your route stays on this phone.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      "expo-asset",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT_UP"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Zepimon saves the adventure images you create to your photos.",
+          "savePhotosPermission": "Zepimon saves the adventure images you create to your photos.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5881b77f-9523-4bff-9eff-bf4da8565240"
+      }
+    }
+  }
+}
