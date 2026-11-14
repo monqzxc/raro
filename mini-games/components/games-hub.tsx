@@ -29,10 +29,10 @@ export default function GamesHub() {
     <div className="games-page">
       <a className="skip-link" href="#games-main">Skip to content</a>
       <header className="games-topbar">
-        <div className="wordmark">
+        <a className="wordmark" href="https://monqzxc.github.io/">
           <strong>mon<span>.</span></strong>
           <span className="games-wordmark-label">Mini games</span>
-        </div>
+        </a>
         <div className="games-tabs" role="tablist" aria-label="Main sections">
           <button
             ref={element => { tabRefs.current[0] = element; }}
