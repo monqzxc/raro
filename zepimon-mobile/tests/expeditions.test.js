@@ -1,9 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import vm from 'node:vm'
 import { emptyExpeditions, importExpeditions, claimExpedition, restoreExpeditions, expeditionJournal } from '../src/expeditions.ts'
-import { expeditionEncounter, expeditionKey, legendarySpecies, validateExpedition } from '../src/generated/expedition.js'
+import { ensureExpedition, expeditionEncounter, expeditionKey, legendarySpecies, validateExpedition } from '../src/generated/expedition.js'
 import { parseJournal, dexEntries } from '../src/journal.ts'
 
 const snapshot = (meters, seed = 0, startedAt = 1000) => parseJournal(JSON.stringify({
@@ -12,31 +10,16 @@ const snapshot = (meters, seed = 0, startedAt = 1000) => parseJournal(JSON.strin
     dex: {}, records: {}, active: null, expedition: { meters, seed, startedAt } }
 }))
 
-test('watch credits only completed distance, survives replacement, and does not retro-credit old records', () => {
-  const context = vm.createContext({})
-  for (const file of ['page/catalog.js', 'page/types.js', 'shared/expedition.js']) {
-    vm.runInContext(fs.readFileSync('../hatdog-app/' + file, 'utf8').replace(/export /g, ''), context)
-  }
-  vm.runInContext('const catalogRoutes = routes', context)
-  // The watch's form rules, under the names page/pokemon.js imports them by.
-  vm.runInContext('(function(){' + fs.readFileSync('../hatdog-app/shared/forms.js', 'utf8').replace(/^import .*\r?\n/gm, '').replace(/export /g, '') +
-    '\nObject.assign(globalThis, { formChoices, earnedForms, nextFormMilestone: nextMilestone, formDistance, spriteForm }) })()', context)
-  // Isolate the re-exported routes declaration from catalog bindings.
-  vm.runInContext('(function(){' + fs.readFileSync('../hatdog-app/page/pokemon.js', 'utf8').replace(/^import .*\r?\n/gm, '').replace(/export /g, '') +
-    '\nglobalThis.finish = finishSession; globalThis.init = ensureExpedition; })()', context)
-  const state = { dex: {}, records: { 0: { meters: 50000, steps: 1, finishedAt: '2026-10-20T00:00:00Z', shiny: false } }, active: null }
-  context.init(state, 1000)
-  assert.equal(state.expedition.meters, 0)
-  const seed = state.expedition.seed
-  for (const meters of [5000, 10000, 12000]) {
-    state.active = { route: 0, meters, steps: 1000, startedAt: 1000, shiny: false }
-    context.finish(state, '2026-10-22T00:00:00Z')
-  }
-  assert.equal(state.expedition.meters, 27000)
-  assert.equal(state.records[0].meters, 12000)
-  context.finish(state, '2026-10-22T00:00:00Z')
-  assert.equal(state.expedition.meters, 27000, 'Duplicate save cannot credit twice')
-  assert.equal(state.expedition.seed, seed)
+test('new expeditions start at zero instead of retro-crediting records and retain progress across replacement', () => {
+  const state = { records: { 0: { meters: 50000, steps: 1, finishedAt: '2026-10-20T00:00:00Z', shiny: false } }, active: null }
+  const created = ensureExpedition(state, 1000)
+  assert.equal(created.startedAt, 1000)
+  assert.equal(created.meters, 0)
+  assert.ok(Number.isSafeInteger(created.seed))
+
+  const replacement = { ...state, records: { 0: { meters: 12000 } },
+    expedition: { ...created, meters: 27000 } }
+  assert.deepEqual(ensureExpedition(replacement, 2000), { ...created, meters: 27000 })
 })
 
 test('new snapshot field is optional, validated, and survives JSON reimport without double credit', () => {

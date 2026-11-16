@@ -5,6 +5,7 @@ import { Platform, Pressable, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { BerryCatch, BerryIcon } from '../../games/BerryCatch'
 import { PokemonQuiz } from '../../games/PokemonQuiz'
+import { SCORE_LIMITS } from '../../games/scores'
 import type { ArcadeGame } from '../../games/scores'
 import { Button, Copy, Icon, IconButton, PokeballIcon, Screen, colors, displayFont, fonts, retro, styles, themedStyles, useTheme } from '../../ui'
 import { GameScreenContext } from '../../games/fullscreen'
@@ -104,7 +105,7 @@ export default function PlayScreen({ standalone = false, initialGame }: { standa
   // The cards show a best only once there is one.
   const shortBest = (game: ArcadeGame, limit: number) => arcadeScores[game] === undefined ? undefined : `Best ${arcadeScores[game]} / ${limit}`
   const stopRecord = (stop: Stop) => `Best here: ${starText(adventure[stop.id] || 0)}`
-  const safariBest = `Best: ${arcadeScores.safari === undefined ? 'Not set' : `${arcadeScores.safari} caught in one hunt`}`
+  const safariBest = `Best: ${arcadeScores.safari === undefined ? 'Not set' : `${arcadeScores.safari} / ${SCORE_LIMITS.safari} caught in one hunt`}`
 
   const stageOpen = selected === 'levels' && trailStage !== null
   function playLevel(level: Level) { setTrailStage(level.stage); select({ game: 'trail', level }) }
@@ -164,7 +165,7 @@ export default function PlayScreen({ standalone = false, initialGame }: { standa
             about: `Tower defense: ${LEVELS.length} levels in ${STAGES.length} stages; ${levelsCleared} cleared.${nextLevel ? ` Next: Level ${nextLevel.number}.` : ''} Evolve your team mid-battle with berries.` },
           { id: 'safari', title: 'Safari Zone', art: size => <SafariArt {...size} />,
             record: arcadeScores.safari === undefined ? undefined : `Best ${arcadeScores.safari} caught`, onPress: () => select({ game: 'safari' }),
-            about: 'Walk Emerald’s Safari Zone with your buddy and catch Pokemon in the tall grass. Catches join your Dex.' },
+            about: 'Explore Emerald’s open Safari Zone with your buddy. Pokémon roam the map; walk into one to catch it. Catches join your Dex.' },
           { id: 'memory', title: 'Memory Match', art: size => <MemoryArt {...size} />,
             onPress: () => select('memory'),
             about: 'Find matching Normal and Shiny pairs from your collection. Needs at least two variants.' },
@@ -205,6 +206,7 @@ export default function PlayScreen({ standalone = false, initialGame }: { standa
       initialTeam={launch.game === 'trail' ? trailTeam : undefined} onStart={launch.game === 'trail' ? setTrailTeam : undefined}
       onFinish={result => launch.stop ? saveStars(launch.stop, result.stars) : saveScore(launch.game, result.score)} />}
     {launch?.game === 'safari' && <SafariZone key={launch.stop?.id ?? 'safari'} zone={launch.stop?.mode === 'safari' ? launch.stop.zone : undefined}
+      saveSlot={launch.stop?.id ?? 'arcade'} onSaveError={setMessage}
       bonusKm={bonus.km} bonusNote={ballsNote} dex={dex} goal={launch.stop ? STAR_GOALS.safari : undefined}
       buddy={buddy ? { name: buddy.replace(/^Shiny /, ''), shiny: buddy.startsWith('Shiny ') } : null}
       record={launch.stop ? stopRecord(launch.stop) : safariBest}

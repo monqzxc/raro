@@ -52,7 +52,7 @@ export const zepimonGames: readonly Game[] = [
     route: "safari-zone",
     launch: "safari",
     name: "Safari Zone",
-    description: "Explore Emerald's Safari Zone, catch Pokémon in the grass, and add them to your Dex.",
+    description: "Explore Emerald's open Safari Zone, meet roaming Pokémon, catch them, and add them to your Dex.",
     players: "1 player",
     category: "Safari",
     sprites: ["pikachu", "bidoof"],

@@ -7,7 +7,7 @@ import { Button, Copy, PokeballIcon, fonts } from '../ui'
 import { FOE_HP, attackWith, chooseMenu, finishAttack, finishIntro, finishThrow, runFromBattle, startBattle, throwBall } from './legendary-battle'
 import type { BattleMenu, LegendaryBattle as Battle } from './legendary-battle'
 import { hitSheet } from './MoveFx'
-import { Sparkles } from './SafariEncounter'
+import { Sparkles } from './SafariWild'
 import { PixelSprite } from './TeamPicker'
 
 type Strip = { source: ImageSourcePropType, frames: number, width: number, height: number }

@@ -53,6 +53,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform all",
+    "build:safari-pokemon-sprites": "node --experimental-strip-types scripts/build-safari-pokemon-sprites.mjs",
     "build:apk": "npx --yes eas-cli@latest build --platform android --profile preview",
     "build:apk:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-apk-local.ps1",
     "sync:watch": "node scripts/sync-watch-data.mjs"

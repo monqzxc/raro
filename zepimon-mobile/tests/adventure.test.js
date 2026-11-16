@@ -34,6 +34,7 @@ test('stars keep the best result and ignore unknown or invalid saves', () => {
 })
 
 test('walking this week adds a capped bonus and never removes anything', () => {
+  assert.equal(BALLS_PER_KM, 6)
   assert.deepEqual(walkingBonus(emptyProgress(), now), { meters: 0, km: 0, balls: 0, berries: 0 })
   const progress = { ...emptyProgress(), runs: [run(26, 1500), run(27, 900), run(19, 9000)] }
   assert.deepEqual(walkingBonus(progress, now), { meters: 2400, km: 2, balls: 2 * BALLS_PER_KM, berries: 2 * BERRIES_PER_KM },
@@ -54,8 +55,8 @@ test('free play covers every type and new arcade scores stay within their limits
   assert.deepEqual(restoreScores({ guard: 10, trail: 13, safari: 4, quiz: 3 }), { guard: 10, safari: 4, quiz: 3 })
 })
 
-test('Safari Zone scores allow every ball a round can hold: 12, the walking bonus and 6 items', () => {
-  assert.equal(SCORE_LIMITS.safari, 39)
-  assert.deepEqual(restoreScores({ safari: 39 }), { safari: 39 })
-  assert.deepEqual(restoreScores({ safari: 40 }), {})
+test('Safari Zone scores allow every ball a round can hold: 24, the walking bonus and 15 items', () => {
+  assert.equal(SCORE_LIMITS.safari, 87)
+  assert.deepEqual(restoreScores({ safari: 87 }), { safari: 87 })
+  assert.deepEqual(restoreScores({ safari: 88 }), {})
 })

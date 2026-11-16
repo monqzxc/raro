@@ -6,7 +6,8 @@ import { safariSprites } from '../generated/safari-assets.js'
 import { trailWalkers } from '../generated/trail-walkers.js'
 import { PixelSprite } from './TeamPicker'
 import type { Direction, Point } from './safari-zone'
-import { STEP_MS, buddyFrame, cameraOffset, chunksAround, fitOffset, fitTile, tapPoint, tileFromTap, tileSizeFor, trainerFrame } from './safari-view'
+import { STEP_MS, buddyFrame, cameraOffset, chunksAround, fitOffset, fitTile, pokemonSpriteSize, tapPoint, tileFromTap, tileSizeFor, trainerFrame } from './safari-view'
+import { safariPokemonScale } from './safari-pokemon-size'
 
 export type Strip = { source: ImageSourcePropType, frames: number, width: number, height: number }
 export type TileMap = { cols: number, rows: number, chunk: number }
@@ -121,9 +122,10 @@ function Buddy({ name, shiny, at, frame, tile, reduced, jump }: { name: string, 
     return () => glide.stop()
   }, [position, at.x, at.y, tile, reduced, jump])
   const strip = walkers[(shiny ? 'Shiny ' : '') + name]
-  return <Animated.View style={{ position: 'absolute', left: 0, top: 0, width: tile, height: tile, transform: position.getTranslateTransform() }}>
-    {strip ? <Frame strip={{ source: strip, frames: 8, width: 44, height: 44 }} frame={frame} width={tile} height={tile} />
-      : <PixelSprite name={name} shiny={shiny} size={tile} />}
+  const size = pokemonSpriteSize(tile, safariPokemonScale(name))
+  return <Animated.View style={{ position: 'absolute', left: (tile - size) / 2, top: tile - size, width: size, height: size, transform: position.getTranslateTransform() }}>
+    {strip ? <Frame strip={{ source: strip, frames: 8, width: 44, height: 44 }} frame={frame} width={size} height={size} />
+      : <PixelSprite name={name} shiny={shiny} size={size} />}
   </Animated.View>
 }
 

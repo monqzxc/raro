@@ -1,10 +1,10 @@
 import { safariMap } from './safari-zone.ts'
-import type { Direction, Point, SafariMap } from './safari-zone.ts'
+import type { Direction, Point, SafariMap, WildAct, ZoneGame } from './safari-zone.ts'
 
 // View maths for the Safari Zone screen, kept free of React so it can be tested: tile size, camera, which map chunks
 // to load, sprite frames, and the queue that turns D-pad presses and tap routes into one step at a time.
 export const STEP_MS = 220
-const ACROSS = 10
+const ACROSS = 12
 // Chunks stay loaded 2 tiles past the screen edge, enough for a step or hop to glide in without a gap.
 const MARGIN = 2
 const FACING: Direction[] = ['south', 'north', 'west', 'east']
@@ -12,13 +12,21 @@ const FACING: Direction[] = ['south', 'north', 'west', 'east']
 // How long until the next step may go: held walking lands each step exactly STEP_MS after the last, like the glide.
 export const stepDelay = (now: number, lastStep: number) => Math.max(0, lastStep + STEP_MS - now)
 
-// About 10 tiles across, between 36 and 58 px. Given a height too (the immersive map), the 10 tiles go across the shorter
+// About 12 tiles across, between 30 and 48 px. Given a height too (the immersive map), the 12 tiles go across the shorter
 // side, so a short, wide landscape view doesn't zoom in too far. A height under 40 px is no map at all and is ignored,
 // so `widths.map(tileSizeFor)` (which passes the index second) still reads the widths alone.
 export function tileSizeFor(width: number, height?: number): number {
   const side = height !== undefined && height >= 40 ? Math.min(width, height) : width
-  return Math.min(58, Math.max(36, Math.floor(side / ACROSS)))
+  return Math.min(48, Math.max(30, Math.floor(side / ACROSS)))
 }
+
+export function actTimes(act: WildAct): number {
+  if (!act.thrown) return 350
+  if (act.thrown === 'ball') return act.left === 'caught' ? 1720 : act.left ? 2220 : 1870
+  return act.left ? 1370 : 1020
+}
+
+export const resultsVisible = (game: Pick<ZoneGame, 'status' | 'act'>) => game.status === 'complete' && !game.act
 
 // Where the map layer goes so the trainer's tile sits in the middle of the view.
 export function cameraOffset(at: Point, tile: number, width: number, height: number): Point {
@@ -61,6 +69,8 @@ export function chunksAround(at: Point, tile: number, width: number, height: num
 // Trainer strips: stand, step A, step B for south, north, west, east. Buddy (trail) strips: two steps each, same order.
 export const trainerFrame = (facing: Direction, phase: 0 | 1 | 2) => FACING.indexOf(facing) * 3 + phase
 export const buddyFrame = (facing: Direction, step: 0 | 1) => FACING.indexOf(facing) * 2 + step
+export const pokemonSpriteSize = (tile: number, scale: number) => tile * 2 * scale
+export const nextSafariPokemonFrame = (frame: 0 | 1, reduced: boolean): 0 | 1 => reduced ? 0 : frame === 0 ? 1 : 0
 
 // held: the direction being pressed now. queued: a press not yet walked, so a quick tap still takes its step.
 // path: a tap-to-walk route. A press drops the route; a new route drops the press.

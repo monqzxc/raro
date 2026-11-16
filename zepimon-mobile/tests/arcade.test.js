@@ -2,7 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { answerQuiz, createQuiz, nextQuestion, quizComplete, quizPokemon, QUIZ_LENGTH } from '../src/games/quiz.ts'
 import { BERRY_DURATION, BERRY_INTERVAL, BERRY_ROUNDS, catchBerry, pauseBerries, readyBerries, resumeBerries, startBerries, tickBerries } from '../src/games/berries.ts'
-import { restoreScores, saveBestScore } from '../src/games/scores.ts'
+import { restoreScores, saveBestScore, SCORE_LIMITS } from '../src/games/scores.ts'
+
+test('Safari Zone maximum score includes the full walking bonus and every map item', () => {
+  assert.equal(SCORE_LIMITS.safari, 87)
+})
 
 test('quiz provides ten distinct Gen 1–4 questions, each with exactly one correct choice', () => {
   assert.ok(quizPokemon.includes('Bulbasaur'))

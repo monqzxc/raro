@@ -17,7 +17,7 @@ import { OverworldSprite } from './OverworldSprite'
 import { Pixels } from './Pixels'
 import { GUARDIAN_STONE, RUNE_DONE, RUNE_SPRITES, RUNE_WAITING, SAFE, SAFE_COLOURS, SEAL_OFF, SEAL_ON, SEAL_SPRITES, STONE_ASLEEP, STONE_AWAKE,
   STRIKE, STRIKE_COLOURS, WARNING, WARNING_COLOURS } from './pixel-sprites'
-import { Sparkles } from './SafariEncounter'
+import { Sparkles } from './SafariWild'
 import { ShinyGlow, ShinyStars } from './ShinyAura'
 import { LairAmbience } from './LairAmbience'
 import { lairSpriteSize } from './lairs'

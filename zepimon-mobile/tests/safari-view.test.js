@@ -1,19 +1,53 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buddyFrame, cameraOffset, chunksAround, followPath, noInput, pressDirection, releaseDirection, stepDelay, takeInput, tapPoint, tileFromTap,
-  tileSizeFor, trainerFrame } from '../src/games/safari-view.ts'
+  tileSizeFor, trainerFrame, actTimes, resultsVisible } from '../src/games/safari-view.ts'
 import { safariMap } from '../src/games/safari-zone.ts'
 
-test('tile size fits about 10 tiles across, between 36 and 58', () => {
-  assert.deepEqual([320, 390, 600, 1280].map(tileSizeFor), [36, 39, 58, 58])
+const spriteView = await import('../src/games/safari-view.ts')
+
+test('map Pokémon scale to the trainer height and stay within the intended size range', () => {
+  assert.equal(typeof spriteView.pokemonSpriteSize, 'function', 'pokemonSpriteSize must be exported')
+  if (!spriteView.pokemonSpriteSize) return
+  assert.equal(spriteView.pokemonSpriteSize(32, 1), 64)
+  assert.equal(spriteView.pokemonSpriteSize(32, 0.8), 51.2)
+  assert.equal(spriteView.pokemonSpriteSize(32, 1.2), 76.8)
 })
 
-test('given a height, about 10 tiles go across the shorter side, between 36 and 58', () => {
-  assert.equal(tileSizeFor(844, 390), 39)
-  assert.equal(tileSizeFor(740, 360), 36)
+test('reduced motion keeps the on-map Pokémon on frame zero', () => {
+  assert.equal(typeof spriteView.nextSafariPokemonFrame, 'function', 'nextSafariPokemonFrame must be exported')
+  if (!spriteView.nextSafariPokemonFrame) return
+  assert.equal(spriteView.nextSafariPokemonFrame(0, false), 1)
+  assert.equal(spriteView.nextSafariPokemonFrame(1, false), 0)
+  assert.equal(spriteView.nextSafariPokemonFrame(1, true), 0)
+})
+
+test('tile size fits about 12 tiles across, between 30 and 48', () => {
+  assert.deepEqual([320, 390, 600, 1280].map(tileSizeFor), [30, 32, 48, 48])
+})
+
+test('given a height, about 12 tiles go across the shorter side, between 30 and 48', () => {
+  assert.equal(tileSizeFor(844, 390), 32)
+  assert.equal(tileSizeFor(740, 360), 30)
   assert.equal(tileSizeFor(390, 844), tileSizeFor(390))
-  assert.equal(tileSizeFor(1280, 800), 58)
-  assert.equal(tileSizeFor(568, 300), 36)
+  assert.equal(tileSizeFor(1280, 800), 48)
+  assert.equal(tileSizeFor(568, 300), 30)
+})
+
+test('on-map action timing covers every encounter outcome', () => {
+  const action = (thrown, reaction, left) => ({ id: 1, thrown, reaction, left, quality: null, wild: {} })
+  assert.equal(actTimes(action('ball', 'caught', 'caught')), 1720)
+  assert.equal(actTimes(action('ball', 'broke-free', null)), 1870)
+  assert.equal(actTimes(action('ball', 'broke-free', 'fled')), 2220)
+  assert.equal(actTimes(action('berry', 'likes', null)), 1020)
+  assert.equal(actTimes(action('rock', 'angry', 'fled')), 1370)
+  assert.equal(actTimes(action(null, null, 'ran')), 350)
+})
+
+test('round results wait until the final on-map action finishes', () => {
+  const finishing = { status: 'complete', act: { id: 1 } }
+  assert.equal(resultsVisible(finishing), false)
+  assert.equal(resultsVisible({ ...finishing, act: null }), true)
 })
 
 test("the camera centres the trainer's tile", () => {
@@ -25,8 +59,8 @@ test("the camera centres the trainer's tile", () => {
 test('loaded chunks always cover the visible window', () => {
   for (const width of [320, 390, 768, 1280]) {
     for (const height of [480, 700, 1024]) {
-      for (const at of [{ x: 0, y: 0 }, { x: 43, y: 43 }, { x: 21, y: 30 }, safariMap.starts.gate]) {
-        const tile = tileSizeFor(width)
+      for (const at of [{ x: 0, y: 0 }, { x: 63, y: 63 }, { x: 21, y: 30 }, safariMap.starts.gate]) {
+        const tile = tileSizeFor(width, height)
         const offset = cameraOffset(at, tile, width, height)
         const keys = new Set(chunksAround(at, tile, width, height))
         for (const key of keys) assert.ok(safariMap.chunks[key], `${key} is not a chunk`)
